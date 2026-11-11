@@ -125,6 +125,14 @@ def write_outputs(res: PatrolResult, out: Path, title: str = "DataRanger patrol 
             rec = {k: v for k, v in r.items() if k not in ("candidates", "kinds", "chosen")}
             rec |= {"chosen": clean(r.get("chosen")), "candidates": [clean(c) for c in r["candidates"]]}
             f.write(json.dumps(rec, default=str) + "\n")
+    rows = []
+    for r in res.incidents:
+        chosen = r.get("chosen") or {}
+        rows.append({"partition": r.get("partition"), "problems": "; ".join(r.get("detectors") or []),
+                     "decision": r["decision"], "action": chosen.get("action"),
+                     "tier": chosen.get("tier"), "residual": chosen.get("residual")})
+    pd.DataFrame(rows, columns=["partition", "problems", "decision", "action", "tier", "residual"]).to_csv(
+        out / "incidents.csv", index=False)
     if res.fixed_table is not None:
         res.fixed_table.to_csv(out / "fixed_version.csv", index=False)
     meta = {"table": table, "days": res.days, "lambda": res.lam, "rows": res.rows, "alpha": 0.01}
