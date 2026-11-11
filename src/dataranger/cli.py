@@ -13,8 +13,16 @@ STAGES = [
 ]
 
 
-def print_summary(res, out):
+def print_summary(res, out, json_output=False):
     n = {d: sum(r["decision"] == d for r in res.incidents) for d in ("auto-fixed", "no action needed", "escalate")}
+    if json_output:
+        import json
+        from pathlib import Path
+
+        print(json.dumps({"incidents": len(res.incidents), "auto_fixed": n["auto-fixed"],
+                          "no_action": n["no action needed"], "escalate": n["escalate"],
+                          "report": str(Path(out) / "dashboard.html")}))
+        return
     print(f"{len(res.incidents)} incidents: {n['auto-fixed']} fixed, {n['no action needed']} checked and left alone, "
           f"{n['escalate']} for you. Report: {out}/dashboard.html")
 
@@ -49,6 +57,8 @@ def main(argv=None):
     pt.add_argument("--amount", default="amount")
     pt.add_argument("--threshold", type=float, default=None, help="gate threshold (default: benchmark-calibrated)")
     pt.add_argument("--out", default="dataranger-report")
+    pt.add_argument("--json", action="store_true", help="print only a machine-readable JSON summary")
+    pt.add_argument("--fail-on-escalate", action="store_true", help="exit with code 2 if any incident needs review")
     cb = sub.add_parser("calibrate", help="choose the gate threshold from your own reviewed incidents")
     cb.add_argument("--audit", nargs="+", required=True, help="audit.jsonl files from past patrols")
     cb.add_argument("--labels", required=True, help="CSV with partition, verdict (right or wrong): was the chosen fix right?")
@@ -116,8 +126,8 @@ def main(argv=None):
                      category=args.category, amount=args.amount, ref_key=args.ref_key)
         res = patrol(facts, refs, man, mp, lam=args.threshold if args.threshold is not None else DEFAULT_LAMBDA)
         write_outputs(res, Path(args.out), f"DataRanger patrol: {table}", table=table)
-        print_summary(res, args.out)
-        return 0
+        print_summary(res, args.out, json_output=args.json)
+        return 2 if args.fail_on_escalate and any(r["decision"] == "escalate" for r in res.incidents) else 0
     if args.command == "bench":
         from .bench import detect, generate, inject, score
         inst = generate(args.seed, args.size)
