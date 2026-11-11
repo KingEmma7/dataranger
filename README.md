@@ -73,6 +73,11 @@ Use one source or the other, not both. With files, `--table` is optional and onl
 
 The control-totals table has one row per date and segment, plus a row with segment `*` for the whole day, with columns `n` (rows) and `amount` (sum). DataRanger never modifies your tables: fixed partitions go to `fixed_version.csv`, every decision and its evidence to `audit.jsonl`, and the morning report to `dashboard.html`.
 
+For scheduled jobs, add `--json` to either `patrol` command to print one JSON object with
+`incidents`, `auto_fixed`, `no_action`, `escalate`, and the `report` path. Add
+`--fail-on-escalate` to return exit code 2 when any incident needs review, or 0 otherwise.
+The flags work independently: `--fail-on-escalate` also works with the normal text summary.
+
 The default threshold was calibrated on the DQ-Repair benchmark for a 1% target. Once people have reviewed some of DataRanger's decisions, calibrate on your own data:
 
 ```bash
