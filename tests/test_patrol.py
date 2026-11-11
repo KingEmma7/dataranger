@@ -29,6 +29,7 @@ def test_patrol_with_renamed_columns_never_touches_input(tmp_path):
 
 def test_cli_demo_and_patrol(tmp_path, capsys):
     assert main(["demo", "--out", str(tmp_path / "demo")]) == 0
+    assert "fixed" in capsys.readouterr().out
     case = inject(generate(6, "small", n_days=40))
     db = str(tmp_path / "w.duckdb")
     con = duckdb.connect(db)
@@ -38,6 +39,7 @@ def test_cli_demo_and_patrol(tmp_path, capsys):
     con.close()
     assert main(["patrol", "--db", db, "--table", "facts", "--ref-table", "customers", "--manifest-table", "manifest",
                  "--category", "category", "--out", str(tmp_path / "rep")]) == 0
+    assert "fixed" in capsys.readouterr().out
     audit = [json.loads(l) for l in open(tmp_path / "rep" / "audit.jsonl")]
     labels = pd.DataFrame({"partition": [a["partition"] for a in audit if not a["table_level"]], "verdict": "right"})
     labels.to_csv(tmp_path / "labels.csv", index=False)
