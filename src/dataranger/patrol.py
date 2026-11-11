@@ -119,7 +119,7 @@ def _parse(s: str) -> F.Fix:
 def write_outputs(res: PatrolResult, out: Path, title: str = "DataRanger patrol report", table: str = "transactions") -> None:
     from .report import render
     out.mkdir(parents=True, exist_ok=True)
-    with open(out / "audit.jsonl", "w") as f:
+    with open(out / "audit.jsonl", "w", encoding="utf-8") as f:
         for r in res.incidents:
             clean = lambda c: {k: v for k, v in c.items() if k != "correct"} if c else c  # drop benchmark-only truth
             rec = {k: v for k, v in r.items() if k not in ("candidates", "kinds", "chosen")}
@@ -128,7 +128,7 @@ def write_outputs(res: PatrolResult, out: Path, title: str = "DataRanger patrol 
     if res.fixed_table is not None:
         res.fixed_table.to_csv(out / "fixed_version.csv", index=False)
     meta = {"table": table, "days": res.days, "lambda": res.lam, "rows": res.rows, "alpha": 0.01}
-    (out / "dashboard.html").write_text(render(res.incidents, title, run_date=date.today().isoformat(), meta=meta))
+    (out / "dashboard.html").write_text(render(res.incidents, title, run_date=date.today().isoformat(), meta=meta), encoding="utf-8")
 
 
 def _quoted(name: str) -> str:

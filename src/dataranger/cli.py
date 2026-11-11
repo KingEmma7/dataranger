@@ -73,13 +73,14 @@ def main(argv=None):
         verdict = dict(zip(lab["partition"].astype(str), lab["verdict"].str.lower().eq("right")))
         recs = []
         for f in args.audit:
-            for line in open(f):
-                r = json.loads(line)
-                c = r.get("chosen")
-                if r["table_level"] or not c or str(r["partition"]) not in verdict:
-                    continue
-                c["correct"] = verdict[str(r["partition"])]
-                recs.append({"table_level": False, "candidates": [c]})
+            with open(f, encoding="utf-8") as audit:
+                for line in audit:
+                    r = json.loads(line)
+                    c = r.get("chosen")
+                    if r["table_level"] or not c or str(r["partition"]) not in verdict:
+                        continue
+                    c["correct"] = verdict[str(r["partition"])]
+                    recs.append({"table_level": False, "candidates": [c]})
         lam = calibrate(recs, args.alpha, args.delta)
         if lam < 0:
             print(f"{len(recs)} labeled incidents are not enough to certify alpha={args.alpha}; keep escalating.")
