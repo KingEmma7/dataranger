@@ -69,8 +69,19 @@ def main(argv=None):
         import json
         import pandas as pd
         from .repair.gate import calibrate
-        lab = pd.read_csv(args.labels)
-        verdict = dict(zip(lab["partition"].astype(str), lab["verdict"].str.lower().eq("right")))
+        lab = pd.read_csv(args.labels, dtype=str, keep_default_na=False)
+        missing = [col for col in ("partition", "verdict") if col not in lab.columns]
+        if missing:
+            raise SystemExit(f"{args.labels}: missing column(s) {', '.join(missing)}; "
+                             "the labels CSV needs partition and verdict (right or wrong).")
+        verdicts = lab["verdict"].str.strip().str.lower()
+        bad = verdicts[~verdicts.isin(["right", "wrong"])]
+        if len(bad):
+            # Row numbers count the header as row 1, as a spreadsheet shows them.
+            shown = ", ".join(f"row {i + 2}: {lab['verdict'][i]!r}" for i in bad.index[:5])
+            more = f" and {len(bad) - 5} more" if len(bad) > 5 else ""
+            raise SystemExit(f"{args.labels}: verdict must be right or wrong, got {shown}{more}.")
+        verdict = dict(zip(lab["partition"].str.strip(), verdicts.eq("right")))
         recs = []
         for f in args.audit:
             for line in open(f):
