@@ -13,6 +13,12 @@ STAGES = [
 ]
 
 
+def print_summary(res, out):
+    n = {d: sum(r["decision"] == d for r in res.incidents) for d in ("auto-fixed", "no action needed", "escalate")}
+    print(f"{len(res.incidents)} incidents: {n['auto-fixed']} fixed, {n['no action needed']} checked and left alone, "
+          f"{n['escalate']} for you. Report: {out}/dashboard.html")
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="dataranger", description=__doc__)
     parser.add_argument("--version", action="version", version=f"dataranger {__version__}")
@@ -81,9 +87,7 @@ def main(argv=None):
                      case.manifest.rename(columns={"channel": "channel"}), Mapping(),
                      source_facts=case.source["transactions"])
         write_outputs(res, Path(args.out), "DataRanger demo patrol", table="demo.payments_daily")
-        n = {d: sum(r["decision"] == d for r in res.incidents) for d in ("auto-fixed", "no action needed", "escalate")}
-        print(f"{len(res.incidents)} incidents: {n['auto-fixed']} fixed, {n['no action needed']} checked and left alone, "
-              f"{n['escalate']} for you. Report: {args.out}/dashboard.html")
+        print_summary(res, args.out)
         return 0
     if args.command == "patrol":
         from pathlib import Path
@@ -112,7 +116,7 @@ def main(argv=None):
                      category=args.category, amount=args.amount, ref_key=args.ref_key)
         res = patrol(facts, refs, man, mp, lam=args.threshold if args.threshold is not None else DEFAULT_LAMBDA)
         write_outputs(res, Path(args.out), f"DataRanger patrol: {table}", table=table)
-        print(f"{len(res.incidents)} incidents. Report: {args.out}/dashboard.html")
+        print_summary(res, args.out)
         return 0
     if args.command == "bench":
         from .bench import detect, generate, inject, score
