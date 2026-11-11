@@ -144,3 +144,25 @@ def from_duckdb(db: str, table: str, ref_table: str, manifest_table: str) -> tup
                 con.execute(f'select * from {_quoted(manifest_table)}').df())
     finally:
         con.close()
+
+
+def from_files(facts: str, refs: str, manifest: str) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Read facts, refs and manifest straight from CSV or Parquet files.
+
+    Mirrors from_duckdb for people who export a few files before they have a
+    database to point at. The reader follows the extension: .csv/.tsv go through
+    DuckDB's ``read_csv_auto``, .parquet/.pq through ``read_parquet``.
+    """
+    con = duckdb.connect()
+    try:
+        def one(path: str) -> pd.DataFrame:
+            suffix = Path(path).suffix.lower()
+            if suffix in (".csv", ".tsv"):
+                return con.execute("select * from read_csv_auto(?)", [path]).df()
+            if suffix in (".parquet", ".pq"):
+                return con.execute("select * from read_parquet(?)", [path]).df()
+            raise ValueError(f"unsupported file type for {path!r}: expected .csv, .tsv, .parquet or .pq")
+
+        return one(facts), one(refs), one(manifest)
+    finally:
+        con.close()

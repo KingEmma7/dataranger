@@ -2,6 +2,7 @@ import json
 
 import duckdb
 import pandas as pd
+import pytest
 
 from dataranger.bench import generate, inject
 from dataranger.cli import main
@@ -42,3 +43,31 @@ def test_cli_demo_and_patrol(tmp_path, capsys):
     labels.to_csv(tmp_path / "labels.csv", index=False)
     assert main(["calibrate", "--audit", str(tmp_path / "rep" / "audit.jsonl"), "--labels", str(tmp_path / "labels.csv")]) == 0
     assert "not enough" in capsys.readouterr().out  # a handful of incidents cannot certify 1%
+
+
+def test_cli_patrol_reads_csv_files(tmp_path, capsys):
+    case = inject(generate(7, "small", n_days=40))
+    case.warehouse["transactions"].to_csv(tmp_path / "facts.csv", index=False)
+    case.warehouse["customers"].to_csv(tmp_path / "customers.csv", index=False)
+    case.manifest.to_csv(tmp_path / "manifest.csv", index=False)
+    out = tmp_path / "rep"
+    assert main(["patrol", "--facts-file", str(tmp_path / "facts.csv"), "--ref-file", str(tmp_path / "customers.csv"),
+                 "--manifest-file", str(tmp_path / "manifest.csv"), "--category", "category",
+                 "--out", str(out)]) == 0
+    assert (out / "dashboard.html").exists()
+    # --table is optional on the file path: the report title falls back to the facts file name.
+    assert "DataRanger patrol: facts" in (out / "dashboard.html").read_text()
+    assert "incidents" in capsys.readouterr().out
+
+
+def test_cli_patrol_rejects_mixed_or_partial_sources(tmp_path):
+    csv = str(tmp_path / "facts.csv")
+    pd.DataFrame({"a": [1]}).to_csv(csv, index=False)
+    mixed = ["patrol", "--facts-file", csv, "--ref-file", csv, "--manifest-file", csv,
+             "--db", "w.duckdb", "--table", "facts", "--ref-table", "customers", "--manifest-table", "manifest"]
+    with pytest.raises(SystemExit):
+        main(mixed)
+    with pytest.raises(SystemExit):
+        main(["patrol"])  # neither source given
+    with pytest.raises(SystemExit):
+        main(["patrol", "--facts-file", csv])  # file source but incomplete

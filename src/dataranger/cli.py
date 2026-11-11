@@ -24,11 +24,16 @@ def main(argv=None):
     dm = sub.add_parser("demo", help="patrol a generated table with planted problems and write the report")
     dm.add_argument("--out", default="dataranger-demo")
     dm.add_argument("--seed", type=int, default=7)
-    pt = sub.add_parser("patrol", help="patrol your own DuckDB tables")
-    pt.add_argument("--db", required=True)
-    pt.add_argument("--table", required=True)
-    pt.add_argument("--ref-table", required=True)
-    pt.add_argument("--manifest-table", required=True, help="control totals: date, segment ('*' = total), n, amount")
+    pt = sub.add_parser("patrol", help="patrol your own DuckDB tables or exported CSV/Parquet files")
+    src = pt.add_argument_group("DuckDB source")
+    src.add_argument("--db", help="DuckDB database file")
+    src.add_argument("--table", help="facts table (default report title when files are used)")
+    src.add_argument("--ref-table", help="reference (customers) table")
+    src.add_argument("--manifest-table", help="control totals: date, segment ('*' = total), n, amount")
+    files = pt.add_argument_group("file source")
+    files.add_argument("--facts-file", help="facts as .csv, .tsv or .parquet")
+    files.add_argument("--ref-file", help="reference (customers) as .csv, .tsv or .parquet")
+    files.add_argument("--manifest-file", help="control totals as .csv, .tsv or .parquet")
     pt.add_argument("--key", default="txn_id")
     pt.add_argument("--reference", default="customer_id")
     pt.add_argument("--ref-key", default="customer_id")
@@ -82,12 +87,31 @@ def main(argv=None):
         return 0
     if args.command == "patrol":
         from pathlib import Path
-        from .patrol import DEFAULT_LAMBDA, Mapping, from_duckdb, patrol, write_outputs
-        facts, refs, man = from_duckdb(args.db, args.table, args.ref_table, args.manifest_table)
+        from .patrol import DEFAULT_LAMBDA, Mapping, from_duckdb, from_files, patrol, write_outputs
+        db_given = [args.db, args.table, args.ref_table, args.manifest_table]
+        file_given = [args.facts_file, args.ref_file, args.manifest_file]
+        use_db, use_files = any(db_given), any(file_given)
+        if use_db and use_files:
+            parser.error("patrol: use either --db with its tables, or --facts-file/--ref-file/--manifest-file, not both")
+        if not use_db and not use_files:
+            parser.error("patrol: give --db with --table/--ref-table/--manifest-table, "
+                         "or --facts-file/--ref-file/--manifest-file")
+        if use_db:
+            missing = [n for n, v in zip(("--db", "--table", "--ref-table", "--manifest-table"), db_given) if not v]
+            if missing:
+                parser.error(f"patrol: missing {', '.join(missing)} for the DuckDB source")
+            facts, refs, man = from_duckdb(args.db, args.table, args.ref_table, args.manifest_table)
+            table = args.table
+        else:
+            missing = [n for n, v in zip(("--facts-file", "--ref-file", "--manifest-file"), file_given) if not v]
+            if missing:
+                parser.error(f"patrol: missing {', '.join(missing)} for the file source")
+            facts, refs, man = from_files(args.facts_file, args.ref_file, args.manifest_file)
+            table = args.table or Path(args.facts_file).stem
         mp = Mapping(key=args.key, reference=args.reference, date=args.date, segment=args.segment,
                      category=args.category, amount=args.amount, ref_key=args.ref_key)
         res = patrol(facts, refs, man, mp, lam=args.threshold if args.threshold is not None else DEFAULT_LAMBDA)
-        write_outputs(res, Path(args.out), f"DataRanger patrol: {args.table}", table=args.table)
+        write_outputs(res, Path(args.out), f"DataRanger patrol: {table}", table=table)
         print(f"{len(res.incidents)} incidents. Report: {args.out}/dashboard.html")
         return 0
     if args.command == "bench":

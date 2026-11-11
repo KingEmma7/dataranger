@@ -61,6 +61,16 @@ dataranger patrol --db warehouse.duckdb --table payments --ref-table customers \
     --date booking_date --segment channel --amount amount
 ```
 
+Or point it straight at exported files, no database needed (`.csv`, `.tsv` or `.parquet`; the reader follows the extension):
+
+```bash
+dataranger patrol --facts-file payments.csv --ref-file customers.csv \
+    --manifest-file control_totals.csv --key payment_id --reference customer_id \
+    --date booking_date --segment channel --amount amount
+```
+
+Use one source or the other, not both. With files, `--table` is optional and only sets the report title (it defaults to the facts file name).
+
 The control-totals table has one row per date and segment, plus a row with segment `*` for the whole day, with columns `n` (rows) and `amount` (sum). DataRanger never modifies your tables: fixed partitions go to `fixed_version.csv`, every decision and its evidence to `audit.jsonl`, and the morning report to `dashboard.html`.
 
 The default threshold was calibrated on the DQ-Repair benchmark for a 1% target. Once people have reviewed some of DataRanger's decisions, calibrate on your own data:
