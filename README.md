@@ -237,6 +237,8 @@ Seeds are fixed, so the numbers come out the same (wall-clock timings aside). Th
 
 Contributions are welcome. Issues labelled [good first issue](https://github.com/akshaysharma1088/dataranger/labels/good%20first%20issue) are small and come with clear steps; see [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
 
+If DataRanger is useful to you, a ⭐ on the repo helps other people find it.
+
 ## Citing
 
 See `CITATION.cff`. Archived on Zenodo: [10.5281/zenodo.23787418](https://doi.org/10.5281/zenodo.23787418).
