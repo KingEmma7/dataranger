@@ -3,6 +3,7 @@ import base64
 from html.parser import HTMLParser
 import json
 from pathlib import Path
+import subprocess
 import warnings
 
 import pytest
@@ -22,7 +23,7 @@ class Tags(HTMLParser):
         self.tags.append((tag, dict(attrs)))
 
 
-def test_notebook_demo_audit_and_dashboard(tmp_path, monkeypatch, capfd):
+def test_notebook_demo_audit_and_dashboard(tmp_path, monkeypatch, capsys):
     pytest.importorskip("IPython", reason="Install the test extra to run the notebook cells")
     notebook = json.loads(NOTEBOOK.read_text(encoding="utf-8"))
     monkeypatch.chdir(tmp_path)
@@ -39,7 +40,7 @@ def test_notebook_demo_audit_and_dashboard(tmp_path, monkeypatch, capfd):
     assert IFRAME_ADVISORY not in [str(item.message) for item in seen]
 
     records = namespace["records"]
-    summary = capfd.readouterr().out
+    summary = capsys.readouterr().out
     assert f"{len(records)} incidents:" in summary
     assert any(r["decision"] == "auto-fixed" for r in records)
     assert any(r["decision"] == "escalate" for r in records)
@@ -68,6 +69,24 @@ def test_notebook_demo_audit_and_dashboard(tmp_path, monkeypatch, capfd):
     original = (namespace["report_dir"] / "dashboard.html").read_text(encoding="utf-8")
     assert 'href="audit.jsonl"' in original
     assert "about:srcdoc" not in original
+
+
+def test_demo_error_prints_diagnostic_before_raising(tmp_path, monkeypatch, capsys):
+    notebook = json.loads(NOTEBOOK.read_text(encoding="utf-8"))
+    cell = next(cell for cell in notebook["cells"] if cell["id"] == "demo")
+    real_run = subprocess.run
+
+    def run_with_bad_option(args, **kwargs):
+        return real_run([*args, "--unknown-demo-option"], **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", run_with_bad_option)
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(subprocess.CalledProcessError) as error:
+        exec(compile("".join(cell["source"]), str(NOTEBOOK), "exec"), {})
+    diagnostic = capsys.readouterr().out
+    assert "unrecognized arguments: --unknown-demo-option" in diagnostic
+    assert error.value.returncode == 2
+    assert error.value.stdout == diagnostic
 
 
 def test_dashboard_advisory_filter_is_scoped(tmp_path, monkeypatch):
