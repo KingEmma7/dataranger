@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0 (2026-11-12)
+
+DataRanger now works as a guardrail for AI agents.
+
+- **MCP server.** `dataranger mcp` lets Claude, Cursor, VS Code and other MCP clients patrol data before they trust it. Tools: `patrol_duckdb`, `patrol_files`, `get_incident` and `run_demo`. Inputs are opened read-only and nothing is written back. Install with `pip install "dataranger[mcp]"`.
+- A wrong column mapping (for example `--key wrong_id`) now stops with a clear error that lists the table's columns, instead of being silently ignored. (#42, thanks @ompatil1906)
+- New example: run a nightly patrol with GitHub Actions, in `examples/scheduled/`. (#38, thanks @KingEmma7)
+
 ## 0.3.0 (2026-11-11)
 
 DataRanger's first community release: every change below came from outside contributors.
