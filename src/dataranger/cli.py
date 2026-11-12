@@ -1,4 +1,4 @@
-"""DataRanger command line: demo, patrol, calibrate, bench and plan."""
+"""DataRanger command line: demo, patrol, calibrate, bench, plan and mcp."""
 import argparse
 
 from . import __version__
@@ -32,6 +32,7 @@ def main(argv=None):
     parser.add_argument("--version", action="version", version=f"dataranger {__version__}")
     sub = parser.add_subparsers(dest="command")
     sub.add_parser("plan", help="show the patrol loop DataRanger will run")
+    sub.add_parser("mcp", help="run DataRanger as an MCP server for AI agents (stdio)")
     b = sub.add_parser("bench", help="generate a DQ-Repair case and run the detectors on it")
     b.add_argument("--size", choices=["small", "medium", "large"], default="small")
     b.add_argument("--seed", type=int, default=1)
@@ -150,6 +151,10 @@ def main(argv=None):
                 ("caught" if r["caught"] else "missed")
             print(f"{r['issue']} {r['kind']:<15} {status}")
         print(f"false alarms on clean partitions: {len(s['false_alarms'])}")
+        return 0
+    if args.command == "mcp":
+        from .mcp_server import main as mcp_main
+        mcp_main()
         return 0
     if args.command == "plan":
         for i, (name, what) in enumerate(STAGES, 1):

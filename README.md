@@ -90,6 +90,45 @@ dataranger calibrate --audit report/audit.jsonl --labels reviewed.csv --alpha 0.
 
 `reviewed.csv` has columns `partition` and `verdict` (right or wrong). About 300 reviewed incidents certify a 1% target and about 60 certify 5%.
 
+## Use it from an AI agent (MCP)
+
+Agents now change pipelines and query data on their own. DataRanger can run as an [MCP](https://modelcontextprotocol.io) server, so an agent can check a table before it trusts it, and hand anything it cannot prove to a person.
+
+```bash
+pip install "dataranger[mcp]"
+```
+
+Claude Code:
+
+```bash
+claude mcp add dataranger -- dataranger mcp
+```
+
+Claude Desktop, Cursor or VS Code (add to the client's MCP config):
+
+```json
+{
+  "mcpServers": {
+    "dataranger": { "command": "dataranger", "args": ["mcp"] }
+  }
+}
+```
+
+The server exposes four tools:
+
+| Tool | What it does |
+|---|---|
+| `patrol_duckdb` | Patrol a fact table in a DuckDB file, with your column names |
+| `patrol_files` | Patrol exported CSV, TSV or Parquet files |
+| `get_incident` | Return the full evidence for one incident from a previous patrol |
+| `run_demo` | Patrol generated data with planted problems, to see the output |
+
+Each patrol returns the counts (auto-fixed, no action needed, escalate), the incidents that need a person, and the paths to the dashboard, audit log and proposed fixed version.
+
+The tools are read-only towards your data. Inputs are opened read-only, nothing is written back, and fixes exist only in the proposed fixed version for review. An agent can learn what is wrong and what DataRanger could prove; it cannot change your warehouse through this server.
+
+Try asking your agent: *"Use DataRanger to run the demo and tell me which partitions need a person, and why."*
+
 ## DQ-Repair benchmark
 
 DQ-Repair measures how many data-quality issues an agent can fix safely. This branch adds the benchmark data and the detection stage.
