@@ -78,6 +78,10 @@ For scheduled jobs, add `--json` to either `patrol` command to print one JSON ob
 `--fail-on-escalate` to return exit code 2 when any incident needs review, or 0 otherwise.
 The flags work independently: `--fail-on-escalate` also works with the normal text summary.
 
+To run a daily patrol and download the morning report, copy the
+[GitHub Actions example](examples/scheduled/). It runs on demo data without credentials
+and includes instructions for your own tables.
+
 The default threshold was calibrated on the DQ-Repair benchmark for a 1% target. Once people have reviewed some of DataRanger's decisions, calibrate on your own data:
 
 ```bash
